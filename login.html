@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LinguaHub | Đăng nhập</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/login.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="logo illustration" aria-hidden="true">
+            <svg viewBox="0 0 220 220" role="img" aria-label="Ong đeo kính đang cầm sách">
+              <circle cx="110" cy="110" r="88" fill="#e8f2ff" />
+              <ellipse cx="86" cy="96" rx="38" ry="30" fill="#facc15" stroke="#1f2937" stroke-width="8" />
+              <ellipse cx="132" cy="96" rx="38" ry="30" fill="#facc15" stroke="#1f2937" stroke-width="8" />
+              <rect x="62" y="74" width="34" height="18" rx="9" fill="#1f2937" />
+              <rect x="124" y="74" width="34" height="18" rx="9" fill="#1f2937" />
+              <rect x="82" y="65" width="54" height="18" rx="8" fill="#111827" />
+              <circle cx="72" cy="96" r="8" fill="#ffffff" />
+              <circle cx="128" cy="96" r="8" fill="#ffffff" />
+              <circle cx="72" cy="96" r="3" fill="#111827" />
+              <circle cx="128" cy="96" r="3" fill="#111827" />
+              <path d="M70 130c10 18 28 28 42 28s32-10 42-28" fill="none" stroke="#1f2937" stroke-width="8" stroke-linecap="round" />
+              <path d="M94 64l-18-24" stroke="#1f2937" stroke-width="8" stroke-linecap="round" />
+              <path d="M126 64l18-24" stroke="#1f2937" stroke-width="8" stroke-linecap="round" />
+              <path d="M84 54l10-24" stroke="#1f2937" stroke-width="7" stroke-linecap="round" />
+              <path d="M136 54l-10-24" stroke="#1f2937" stroke-width="7" stroke-linecap="round" />
+              <path d="M82 152l-24 24" stroke="#f59e0b" stroke-width="9" stroke-linecap="round" />
+              <path d="M138 152l24 24" stroke="#f59e0b" stroke-width="9" stroke-linecap="round" />
+              <rect x="142" y="120" width="44" height="34" rx="6" fill="#2563eb" />
+              <rect x="148" y="126" width="32" height="22" rx="4" fill="#f8fafc" />
+              <path d="M152 132h24" stroke="#2563eb" stroke-width="4" stroke-linecap="round" />
+              <path d="M154 138h20" stroke="#2563eb" stroke-width="4" stroke-linecap="round" />
+              <path d="M160 146l-10 12" stroke="#1f2937" stroke-width="6" stroke-linecap="round" />
+              <path d="M170 146l10 12" stroke="#1f2937" stroke-width="6" stroke-linecap="round" />
+            </svg>
+          </div>
+          <h1>Đăng nhập hệ thống</h1>
+          <p>Chọn vai trò để bắt đầu công việc</p>
+        </div>
+
+        <div class="role-switch" role="tablist" aria-label="Chọn vai trò đăng nhập">
+          <a class="role-btn admin-link" href="admin-login.html">Đăng nhập Admin</a>
+          <button class="role-btn active" data-role="teacher" type="button">Giảng viên</button>
+          <button class="role-btn" data-role="student" type="button">Học viên</button>
+        </div>
+
+        <form id="login-form" class="auth-form active-form">
+          <input type="hidden" name="role" id="login-role" value="teacher" />
+          <label>
+            Tên đăng nhập
+            <input name="username" type="text" placeholder="Nhập tên đăng nhập" required />
+          </label>
+          <label>
+            Mật khẩu
+            <input name="password" type="password" placeholder="Nhập mật khẩu" required />
+          </label>
+          <button class="btn btn-primary" type="submit">Đăng nhập</button>
+        </form>
+
+        <p class="hint-text">Tài khoản mẫu: <strong>teacher / 123456</strong> (giảng viên) hoặc <strong>student / 123456</strong> (học viên).</p>
+        <p class="footer-link">
+          Chưa có tài khoản?
+          <a href="register.html">Đăng ký ngay</a>
+        </p>
+      </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/login.js"></script>
+  </body>
+</html>

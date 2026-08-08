@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LinguaHub | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: 'Poppins', sans-serif; background: #f4f7fb; color: #11223b; }
+      .app-shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+      .sidebar { background: linear-gradient(180deg, #0f172a 0%, #1d4ed8 100%); color: #fff; padding: 24px 18px; }
+      .brand h1 { margin: 0 0 6px; font-size: 1.5rem; }
+      .brand p { margin: 0 0 24px; color: rgba(255,255,255,0.8); }
+      .nav-links { display: grid; gap: 8px; }
+      .nav-btn { display: block; width: 100%; border: none; text-align: left; padding: 12px 14px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.12); color: #fff; font-weight: 600; }
+      .nav-btn.active, .nav-btn:hover { background: rgba(255,255,255,0.24); }
+      .main-content { padding: 24px; }
+      .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+      .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .topbar-pill { background: #fff; padding: 10px 14px; border-radius: 999px; color: #66758a; box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08); }
+      .eyebrow { margin: 0; text-transform: uppercase; letter-spacing: 0.18em; color: #6b7280; font-size: 0.75rem; }
+      .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+      .card { background: #fff; border: 1px solid rgba(229,231,235,0.9); border-radius: 22px; padding: 22px; box-shadow: 0 20px 45px rgba(15, 23, 42, 0.09); }
+      .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; }
+      .section-head h3 { margin: 0; }
+      .btn { border: none; border-radius: 999px; padding: 10px 14px; cursor: pointer; font-weight: 600; transition: transform 0.2s ease, opacity 0.2s ease; }
+      .btn.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24); }
+      .btn.secondary { background: #eef2ff; color: #2563eb; }
+      .btn.danger { background: #ef4444; color: #fff; }
+      .btn:hover { opacity: 0.95; transform: translateY(-1px); }
+      .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      .form-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+      label { display: grid; gap: 6px; font-weight: 600; color: #66758a; }
+      input, select { width: 100%; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #fcfdff; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e5e7eb; }
+      th { color: #66758a; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; }
+      tr:hover { background: #f8fafc; }
+      .card h3 { margin: 0 0 18px; font-size: 1.1rem; }
+      .stat-card { min-height: 160px; }
+      .stat-card h3 { font-size: 0.95rem; color: #475569; }
+      .stat-card p { margin: 16px 0 6px; font-size: 2rem; color: #111827; }
+      .stat-card span { color: #64748b; }
+      .view { display: none; }
+      .view.active { display: block; }
+      .summary-item { background: #f8fbff; border: 1px solid #dbeafe; border-radius: 16px; padding: 16px; }
+      .summary-item strong { display: block; color: #475569; margin-bottom: 6px; }
+      .summary-item div { font-size: 1.2rem; font-weight: 700; color: #111827; }
+      @media (max-width: 1024px) {
+        .app-shell { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 760px) {
+        .stats-grid, .form-grid { grid-template-columns: 1fr; }
+        .section-head, .topbar { flex-direction: column; align-items: flex-start; }
+        .btn { width: 100%; }
+        .form-actions { flex-direction: column; align-items: stretch; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>LinguaHub</h1>
+          <p>Quản lý trung tâm</p>
+        </div>
+        <nav class="nav-links" id="sidebar-nav"></nav>
+      </aside>
+      <main class="main-content">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Bảng điều khiển</p>
+            <h2 id="page-title">Tổng quan</h2>
+          </div>
+          <div class="topbar-actions">
+            <span class="topbar-pill" id="user-badge">Khách</span>
+            <button class="btn secondary" id="logout-btn" type="button">Đăng xuất</button>
+          </div>
+        </div>
+
+        <section class="view active" id="overview">
+          <div class="stats-grid">
+            <div class="card stat-card accent-blue">
+              <h3>Học viên</h3>
+              <p id="student-count">0</p>
+              <span>Số lượng học viên</span>
+            </div>
+            <div class="card stat-card accent-green">
+              <h3>Giảng viên</h3>
+              <p id="teacher-count">0</p>
+              <span>Số lượng giảng viên</span>
+            </div>
+            <div class="card stat-card accent-purple">
+              <h3>Lớp học</h3>
+              <p id="course-count">0</p>
+              <span>Số lượng lớp học</span>
+            </div>
+            <div class="card stat-card accent-orange">
+              <h3>Doanh thu</h3>
+              <p id="revenue-total">0đ</p>
+              <span>Thanh toán đã thu</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Tổng quan hệ thống</h3>
+            <div id="overview-summary"></div>
+          </div>
+          <div class="card">
+            <h3>Gợi ý AI</h3>
+            <div id="ai-insights"></div>
+          </div>
+        </section>
+
+        <section class="view" id="students">
+          <div class="section-head">
+            <h3>Quản lý học viên</h3>
+            <button id="add-student-btn" class="btn primary" data-form-toggle="student-form" type="button">Thêm học viên</button>
+          </div>
+          <div class="card">
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Tên</th>
+                  <th>Email</th>
+                  <th>Khóa</th>
+                  <th>Trình độ</th>
+                  <th>Trạng thái</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="student-table-body"></tbody>
+            </table>
+          </div>
+          <div id="student-form-card" class="card form-card">
+            <h3>Thông tin học viên</h3>
+            <form id="student-form" class="form-grid">
+              <input type="hidden" id="student-id" />
+              <label>
+                Tên
+                <input id="student-name" required />
+              </label>
+              <label>
+                Email
+                <input id="student-email" type="email" required />
+              </label>
+              <label>
+                Điện thoại
+                <input id="student-phone" required />
+              </label>
+              <label>
+                Khóa
+                <input id="student-course" required />
+              </label>
+              <label>
+                Mức độ
+                <input id="student-level" required />
+              </label>
+              <label>
+                Trạng thái
+                <select id="student-status">
+                  <option value="Đang học">Đang học</option>
+                  <option value="Hoàn thành">Hoàn thành</option>
+                  <option value="Tạm nghỉ">Tạm nghỉ</option>
+                </select>
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Lưu học viên</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view" id="teachers">
+          <div class="section-head">
+            <h3>Quản lý giảng viên</h3>
+            <button id="add-teacher-btn" class="btn primary" data-form-toggle="teacher-form" type="button">Thêm giảng viên</button>
+          </div>
+          <div class="card">
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Tên</th>
+                  <th>Môn</th>
+                  <th>Điện thoại</th>
+                  <th>Kinh nghiệm</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="teacher-table-body"></tbody>
+            </table>
+          </div>
+          <div id="teacher-form-card" class="card form-card">
+            <h3>Thông tin giảng viên</h3>
+            <form id="teacher-form" class="form-grid">
+              <input type="hidden" id="teacher-id" />
+              <label>
+                Tên
+                <input id="teacher-name" required />
+              </label>
+              <label>
+                Môn dạy
+                <input id="teacher-subject" required />
+              </label>
+              <label>
+                Điện thoại
+                <input id="teacher-phone" required />
+              </label>
+              <label>
+                Kinh nghiệm
+                <input id="teacher-experience" required />
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Lưu giảng viên</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view" id="courses">
+          <div class="section-head">
+            <h3>Quản lý lớp học</h3>
+            <button class="btn primary" data-form-toggle="course-form" type="button">Thêm lớp học</button>
+          </div>
+          <div class="card">
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Tên lớp</th>
+                  <th>Giảng viên</th>
+                  <th>Trình độ</th>
+                  <th>Phòng</th>
+                  <th>Lịch</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="course-table-body"></tbody>
+            </table>
+          </div>
+          <div class="card form-card">
+            <h3>Thông tin lớp học</h3>
+            <form id="course-form" class="form-grid">
+              <input type="hidden" id="course-id" />
+              <label>
+                Tên lớp
+                <input id="course-name" required />
+              </label>
+              <label>
+                Giảng viên
+                <select id="course-teacher"></select>
+              </label>
+              <label>
+                Trình độ
+                <input id="course-level" required />
+              </label>
+              <label>
+                Phòng
+                <input id="course-room" required />
+              </label>
+              <label>
+                Ngày
+                <input id="course-day" required />
+              </label>
+              <label>
+                Giờ
+                <input id="course-time" required />
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Lưu lớp học</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view" id="schedule">
+          <div class="section-head">
+            <h3>Lịch học</h3>
+            <button id="schedule-action" class="btn primary" data-form-toggle="schedule-form" type="button">Quản lý lịch</button>
+          </div>
+          <div class="card">
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Lớp</th>
+                  <th>Giảng viên</th>
+                  <th>Phòng</th>
+                  <th>Ngày</th>
+                  <th>Giờ</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="schedule-table-body"></tbody>
+            </table>
+          </div>
+          <div id="schedule-form-card" class="card form-card">
+            <h3>Thông tin lịch học</h3>
+            <form id="schedule-form" class="form-grid">
+              <input type="hidden" id="schedule-id" />
+              <label>
+                Tên lớp
+                <input id="schedule-name" required />
+              </label>
+              <label>
+                Giảng viên
+                <select id="schedule-teacher"></select>
+              </label>
+              <label>
+                Phòng
+                <input id="schedule-room" required />
+              </label>
+              <label>
+                Ngày
+                <input id="schedule-day" required />
+              </label>
+              <label>
+                Giờ
+                <input id="schedule-time" required />
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Lưu lịch</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view" id="attendance">
+          <div class="section-head">
+            <h3>Điểm danh</h3>
+            <button class="btn primary" data-form-toggle="attendance-form" type="button">Ghi điểm danh</button>
+          </div>
+          <div class="card">
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Học viên</th>
+                  <th>Lớp</th>
+                  <th>Ngày</th>
+                  <th>Trạng thái</th>
+                  <th>Ghi chú</th>
+                  <th>Người điểm danh</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-table-body"></tbody>
+            </table>
+          </div>
+          <div class="card form-card">
+            <h3>Thêm bản ghi điểm danh</h3>
+            <form id="attendance-form" class="form-grid">
+              <label>
+                Học viên
+                <select id="attendance-student" required></select>
+              </label>
+              <label>
+                Lớp học
+                <select id="attendance-course" required></select>
+              </label>
+              <label>
+                Ngày
+                <input id="attendance-date" type="date" required />
+              </label>
+              <label>
+                Trạng thái
+                <select id="attendance-status">
+                  <option value="Có mặt">Có mặt</option>
+                  <option value="Vắng">Vắng</option>
+                  <option value="Muộn">Muộn</option>
+                </select>
+              </label>
+              <label>
+                Ghi chú
+                <input id="attendance-note" />
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Lưu điểm danh</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view" id="homework">
+          <div class="section-head">
+            <h3>Bài tập</h3>
+            <button id="assignment-action" class="btn primary" data-form-toggle="assignment-form" type="button">Tạo bài tập</button>
+          </div>
+          <div class="card">
+            <h3>Danh sách bài tập</h3>
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Tiêu đề</th>
+                  <th>Khóa</th>
+                  <th>Hạn nộp</th>
+                  <th>Người tạo</th>
+                  <th>Mô tả</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="assignment-table-body"></tbody>
+            </table>
+          </div>
+          <div id="assignment-form-card" class="card form-card">
+            <h3>Tạo / sửa bài tập</h3>
+            <form id="assignment-form" class="form-grid">
+              <input type="hidden" id="assignment-id" />
+              <label>
+                Tiêu đề
+                <input id="assignment-title" required />
+              </label>
+              <label>
+                Khóa học
+                <select id="assignment-course"></select>
+              </label>
+              <label>
+                Hạn nộp
+                <input id="assignment-due" type="date" required />
+              </label>
+              <label style="grid-column: span 2;">
+                Mô tả
+                <textarea id="assignment-desc" rows="4" style="width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px; resize:vertical;"></textarea>
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Lưu bài tập</button>
+              </div>
+            </form>
+          </div>
+          <div id="submission-form-card" class="card form-card">
+            <h3>Nộp bài</h3>
+            <form id="submission-form" class="form-grid">
+              <label>
+                Bài tập
+                <select id="submission-assignment" required></select>
+              </label>
+              <label>
+                Học viên
+                <select id="submission-student" required></select>
+              </label>
+              <label>
+                Link / nội dung
+                <input id="submission-content" placeholder="Link nộp bài hoặc ghi chú" required />
+              </label>
+              <label>
+                Ghi chú
+                <input id="submission-note" />
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Nộp bài</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Danh sách nộp bài</h3>
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Học viên</th>
+                  <th>Bài tập</th>
+                  <th>Nội dung</th>
+                  <th>Ngày nộp</th>
+                  <th>Điểm</th>
+                  <th>Phản hồi</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="submission-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" id="payments">
+          <div class="section-head">
+            <h3>Thanh toán</h3>
+            <button class="btn primary" data-form-toggle="payment-form" type="button">Thêm giao dịch</button>
+          </div>
+          <div class="card">
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>Học viên</th>
+                  <th>Số tiền</th>
+                  <th>Phương thức</th>
+                  <th>Ngày</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody id="payment-table-body"></tbody>
+            </table>
+          </div>
+          <div class="card form-card">
+            <h3>Thêm thanh toán</h3>
+            <form id="payment-form" class="form-grid">
+              <label>
+                Học viên
+                <select id="payment-student"></select>
+              </label>
+              <label>
+                Số tiền
+                <input id="payment-amount" type="number" required />
+              </label>
+              <label>
+                Phương thức
+                <select id="payment-method">
+                  <option value="Chuyển khoản">Chuyển khoản</option>
+                  <option value="Tiền mặt">Tiền mặt</option>
+                </select>
+              </label>
+              <label>
+                Ngày
+                <input id="payment-date" type="date" required />
+              </label>
+              <label>
+                Trạng thái
+                <select id="payment-status">
+                  <option value="Đã thu">Đã thu</option>
+                  <option value="Chờ xử lý">Chờ xử lý</option>
+                </select>
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn secondary" type="reset">Xóa</button>
+                <button class="btn primary" type="submit">Lưu thanh toán</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="view" id="ai">
+          <div class="section-head">
+            <h3>Trợ lý AI</h3>
+          </div>
+          <div class="card">
+            <form id="ai-form" class="form-grid">
+              <label>
+                Câu hỏi
+                <input id="ai-input" placeholder="Hỏi AI về học viên, lớp học hoặc thống kê" />
+              </label>
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+                <button class="btn primary" type="submit">Gửi</button>
+              </div>
+            </form>
+          </div>
+          <div class="card" id="ai-chat"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
