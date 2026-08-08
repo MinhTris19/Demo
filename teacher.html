@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LinguaHub | Giảng viên</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      body { background: #f4f8ff; }
+      .dashboard { max-width: 1000px; margin: 40px auto; padding: 24px; background: white; border-radius: 24px; box-shadow: 0 20px 45px rgba(37, 99, 235, 0.12); }
+      .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+      .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      .card { background: #f8fbff; padding: 18px; border-radius: 16px; border: 1px solid #dbeafe; }
+      .btn { margin-top: 10px; }
+      .ai-toggle { position: fixed; right: 24px; bottom: 24px; width: 64px; height: 64px; border-radius: 50%; border: none; background: linear-gradient(135deg, #f59e0b, #facc15); color: white; font-size: 30px; cursor: pointer; box-shadow: 0 12px 26px rgba(245, 158, 11, 0.35); z-index: 1000; }
+      .ai-panel { position: fixed; right: 24px; bottom: 96px; width: min(92vw, 340px); background: white; border: 1px solid #dbeafe; border-radius: 18px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16); padding: 14px; display: none; z-index: 1000; }
+      .ai-panel.open { display: block; }
+      .ai-panel textarea { width: 100%; min-height: 70px; border: 1px solid #dbeafe; border-radius: 12px; padding: 10px; margin-top: 8px; }
+      .ai-panel .answer { margin-top: 10px; padding: 10px; background: #f8fbff; border-radius: 12px; color: #1d4ed8; font-size: 0.95rem; }
+      @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div class="topbar">
+        <div>
+          <p class="eyebrow">Trang giảng viên</p>
+          <h1>Xin chào Giảng viên</h1>
+        </div>
+        <button class="btn btn-secondary" onclick="logout()" type="button">Đăng xuất</button>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Điểm danh học viên</h3>
+          <p>Ghi nhận trạng thái có mặt, vắng và muộn.</p>
+          <button class="btn btn-primary">Điểm danh</button>
+        </div>
+        <div class="card">
+          <h3>Quản lý lớp học</h3>
+          <p>Xem lịch dạy và thông tin lớp đang phụ trách.</p>
+          <button class="btn btn-primary">Xem lớp</button>
+        </div>
+      </div>
+
+      <button class="ai-toggle" type="button" onclick="toggleTeacherAi()" aria-label="Mở trợ lý AI">🐝</button>
+      <div class="ai-panel" id="teacher-ai-panel">
+        <h3>AI Giảng viên</h3>
+        <p>Chỉ hỗ trợ tìm học viên, điểm danh và quản lý lớp học.</p>
+        <textarea id="teacher-ai-input" placeholder="Ví dụ: Tìm học viên tên Nguyễn Văn A"></textarea>
+        <button class="btn btn-primary" type="button" onclick="askTeacherAi()">Hỏi AI</button>
+        <div class="answer" id="teacher-ai-answer"></div>
+      </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/ai-assistant.js"></script>
+    <script>
+      const session = getSession();
+      if (!session || session.role !== 'teacher') {
+        window.location.href = 'login.html';
+      }
+
+      function logout() {
+        clearSession();
+        window.location.href = 'login.html';
+      }
+
+      const teacherAssistant = createRoleAssistant('teacher');
+
+      function toggleTeacherAi() {
+        const panel = document.getElementById('teacher-ai-panel');
+        if (panel) {
+          panel.classList.toggle('open');
+        }
+      }
+
+      function askTeacherAi() {
+        const input = document.getElementById('teacher-ai-input');
+        const answer = document.getElementById('teacher-ai-answer');
+        if (!input || !answer) return;
+        answer.textContent = teacherAssistant.answer(input.value);
+      }
+    </script>
+  </body>
+</html>

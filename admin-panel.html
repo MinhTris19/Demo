@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LinguaHub | Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      body { background: #f4f8ff; }
+      .panel { max-width: 980px; margin: 40px auto; padding: 24px; background: white; border-radius: 24px; box-shadow: 0 20px 45px rgba(37, 99, 235, 0.12); }
+      .grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+      .card { padding: 18px; border: 1px solid #dbeafe; border-radius: 16px; background: #f8fbff; }
+      input, select { width: 100%; margin-top: 6px; margin-bottom: 12px; }
+      .btn { margin-top: 6px; }
+      @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>Quản trị hệ thống</h1>
+      <p>Đăng nhập bằng email & mật khẩu, sau đó xác thực bằng mã OTP gửi về email.</p>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Đăng nhập admin</h3>
+          <form id="admin-login-form">
+            <label>Email<input type="email" id="adminEmail" required /></label>
+            <label>Mật khẩu<input type="password" id="adminPassword" required /></label>
+            <button class="btn btn-primary" type="submit">Đăng nhập</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3>Gửi mã xác thực</h3>
+          <form id="otp-form">
+            <label>Email quản trị<input type="email" id="otpEmail" required /></label>
+            <button class="btn btn-primary" type="submit">Gửi mã OTP</button>
+          </form>
+          <div id="otp-message"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h3>Trao quyền admin</h3>
+        <form id="assign-admin-form">
+          <label>Email tài khoản cần cấp<input type="email" id="targetEmail" required /></label>
+          <label>Người thực hiện<input type="email" id="actorEmail" required /></label>
+          <button class="btn btn-primary" type="submit">Cấp / thu quyền admin</button>
+        </form>
+        <div id="assign-message"></div>
+      </div>
+    </div>
+
+    <script>
+      const adminLoginForm = document.getElementById('admin-login-form');
+      const otpForm = document.getElementById('otp-form');
+      const assignAdminForm = document.getElementById('assign-admin-form');
+
+      adminLoginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('adminEmail').value;
+        const password = document.getElementById('adminPassword').value;
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: email, password })
+        });
+        const data = await res.json();
+        alert(data.success ? 'Đăng nhập thành công' : data.message);
+      });
+
+      otpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('otpEmail').value;
+        const res = await fetch('/api/admin/request-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        const data = await res.json();
+        document.getElementById('otp-message').innerText = data.success ? `OTP đã gửi về ${email}` : data.message;
+      });
+
+      assignAdminForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const targetEmail = document.getElementById('targetEmail').value;
+        const actorEmail = document.getElementById('actorEmail').value;
+        const res = await fetch('/api/admin/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetEmail, actorEmail }) });
+        const data = await res.json();
+        document.getElementById('assign-message').innerText = data.message;
+      });
+    </script>
+  </body>
+</html>
