@@ -14,7 +14,7 @@ roleButtons.forEach((button) => {
 });
 
 if (form) {
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const data = new FormData(form);
@@ -22,15 +22,24 @@ if (form) {
     const password = data.get('password')?.toString();
     const role = data.get('role')?.toString();
 
-    const users = loadUsers();
-    const user = users.find((item) => item.username === username && item.password === password && item.role === role);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+      });
 
-    if (!user) {
-      alert('Thông tin đăng nhập không đúng');
-      return;
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        alert(result.message || 'Thông tin đăng nhập không đúng');
+        return;
+      }
+
+      setSession({ ...result.user, token: result.token });
+      window.location.href = 'dashboard.html';
+    } catch (error) {
+      console.error(error);
+      alert('Lỗi kết nối đến máy chủ');
     }
-
-    setSession(user);
-    window.location.href = 'dashboard.html';
   });
 }

@@ -3,25 +3,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!form) return;
 
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const username = document.getElementById('adminEmail').value.trim();
     const password = document.getElementById('adminPassword').value;
 
-    const users = loadUsers();
-    const user = users.find((item) =>
-      (item.username === username || item.email === username) &&
-      item.password === password &&
-      item.role === 'admin'
-    );
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role: 'admin' })
+      });
 
-    if (!user) {
-      alert('Tên đăng nhập hoặc mật khẩu admin không đúng');
-      return;
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        alert(result.message || 'Tên đăng nhập hoặc mật khẩu admin không đúng');
+        return;
+      }
+
+      setSession({ ...result.user, token: result.token });
+      window.location.href = 'dashboard.html';
+    } catch (error) {
+      console.error(error);
+      alert('Lỗi kết nối đến máy chủ');
     }
-
-    setSession(user);
-    window.location.href = 'dashboard.html';
   });
 });

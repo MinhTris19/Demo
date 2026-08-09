@@ -42,7 +42,7 @@
         <div class="card">
           <h3>Quản lý lớp học</h3>
           <p>Xem lịch dạy và thông tin lớp đang phụ trách.</p>
-          <button class="btn btn-primary" type="button" onclick="window.location.href='dashboard.html#courses'">Xem lớp</button>
+          <button class="btn btn-primary" type="button" onclick="window.location.href='/Teacher/Classes'">Xem lớp</button>
         </div>
       </div>
 
@@ -51,8 +51,9 @@
         <h3>AI Giảng viên</h3>
         <p>Chỉ hỗ trợ tìm học viên, điểm danh và quản lý lớp học.</p>
         <textarea id="teacher-ai-input" placeholder="Ví dụ: Tìm học viên tên Nguyễn Văn A"></textarea>
-        <button class="btn btn-primary" type="button" onclick="askTeacherAi()">Hỏi AI</button>
+        <button class="btn btn-primary" type="button" id="teacher-ai-btn" onclick="askTeacherAi()">Hỏi AI</button>
         <div class="answer" id="teacher-ai-answer"></div>
+        <div id="teacher-ai-history"></div>
       </div>
     </div>
 
@@ -69,7 +70,7 @@
         window.location.href = 'login.html';
       }
 
-      const teacherAssistant = createRoleAssistant('teacher');
+      const teacherAiHistory = [];
 
       function toggleTeacherAi() {
         const panel = document.getElementById('teacher-ai-panel');
@@ -78,12 +79,55 @@
         }
       }
 
-      function askTeacherAi() {
+      async function askTeacherAi() {
         const input = document.getElementById('teacher-ai-input');
         const answer = document.getElementById('teacher-ai-answer');
-        if (!input || !answer) return;
-        answer.textContent = teacherAssistant.answer(input.value);
+        const button = document.getElementById('teacher-ai-btn');
+        if (!input || !answer || !button) return;
+
+        const question = input.value.trim();
+        if (!question) {
+          answer.textContent = 'Vui lòng nhập câu hỏi.';
+          return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Đang xử lý...';
+        answer.textContent = '';
+
+        try {
+          const result = await askAi(question);
+          answer.textContent = result.answer || 'Không có câu trả lời.';
+          teacherAiHistory.unshift({ question, answer: result.answer || 'Không có câu trả lời.' });
+          renderTeacherAiHistory();
+        } catch (error) {
+          console.error(error);
+          answer.textContent = error.message || 'Lỗi khi gọi dịch vụ AI.';
+        } finally {
+          button.disabled = false;
+          button.textContent = 'Hỏi AI';
+        }
       }
+
+      function renderTeacherAiHistory() {
+        const history = document.getElementById('teacher-ai-history');
+        if (!history) return;
+        history.innerHTML = teacherAiHistory.map(item => `
+          <div class="ai-history-item"><strong>Q:</strong> ${item.question}<br><strong>A:</strong> ${item.answer}</div>
+        `).join('');
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('teacher-ai-input');
+        if (input) {
+          input.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              askTeacherAi();
+            }
+          });
+        }
+      });
     </script>
   </body>
 </html>

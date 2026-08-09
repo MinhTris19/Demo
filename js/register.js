@@ -1,6 +1,6 @@
 const form = document.getElementById('register-form');
 
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const data = new FormData(form);
@@ -12,7 +12,7 @@ form.addEventListener('submit', (event) => {
   const confirmPassword = data.get('confirmPassword')?.toString();
   const role = data.get('role')?.toString();
 
-  if (!name || !email || !phone || !username || !password || !confirmPassword) {
+  if (!name || !email || !phone || !username || !password || !confirmPassword || !role) {
     alert('Vui lòng điền đầy đủ thông tin');
     return;
   }
@@ -22,25 +22,24 @@ form.addEventListener('submit', (event) => {
     return;
   }
 
-  const users = loadUsers();
-  const exists = users.some((item) => item.username === username);
-  if (exists) {
-    alert('Tên đăng nhập đã tồn tại');
-    return;
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName: name, email, username, password, role })
+    });
+
+    const result = await res.json();
+    if (!res.ok || !result.success) {
+      alert(result.message || 'Không thể đăng ký tài khoản');
+      return;
+    }
+
+    setSession({ ...result.user, token: result.token });
+    alert('Đăng ký thành công!');
+    window.location.href = 'dashboard.html';
+  } catch (error) {
+    console.error(error);
+    alert('Lỗi kết nối đến máy chủ');
   }
-
-  const newUser = {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    phone,
-    username,
-    password,
-    role
-  };
-
-  users.push(newUser);
-  saveUsers(users);
-  alert('Đăng ký thành công! Bạn có thể đăng nhập ngay.');
-  window.location.href = 'login.html';
 });

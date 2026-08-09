@@ -51,8 +51,9 @@
         <h3>AI Học viên</h3>
         <p>Chỉ hỗ trợ câu hỏi về khóa học, lịch học và điểm danh.</p>
         <textarea id="student-ai-input" placeholder="Ví dụ: Cho tôi xem lịch học tuần này"></textarea>
-        <button class="btn btn-primary" type="button" onclick="askStudentAi()">Hỏi AI</button>
+        <button class="btn btn-primary" type="button" id="student-ai-btn" onclick="askStudentAi()">Hỏi AI</button>
         <div class="answer" id="student-ai-answer"></div>
+        <div id="student-ai-history"></div>
       </div>
     </div>
 
@@ -69,7 +70,7 @@
         window.location.href = 'login.html';
       }
 
-      const studentAssistant = createRoleAssistant('student');
+      const studentAiHistory = [];
 
       function toggleStudentAi() {
         const panel = document.getElementById('student-ai-panel');
@@ -78,12 +79,55 @@
         }
       }
 
-      function askStudentAi() {
+      async function askStudentAi() {
         const input = document.getElementById('student-ai-input');
         const answer = document.getElementById('student-ai-answer');
-        if (!input || !answer) return;
-        answer.textContent = studentAssistant.answer(input.value);
+        const button = document.getElementById('student-ai-btn');
+        if (!input || !answer || !button) return;
+
+        const question = input.value.trim();
+        if (!question) {
+          answer.textContent = 'Vui lòng nhập câu hỏi.';
+          return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Đang xử lý...';
+        answer.textContent = '';
+
+        try {
+          const result = await askAi(question);
+          answer.textContent = result.answer || 'Không có câu trả lời.';
+          studentAiHistory.unshift({ question, answer: result.answer || 'Không có câu trả lời.' });
+          renderStudentAiHistory();
+        } catch (error) {
+          console.error(error);
+          answer.textContent = error.message || 'Lỗi khi gọi dịch vụ AI.';
+        } finally {
+          button.disabled = false;
+          button.textContent = 'Hỏi AI';
+        }
       }
+
+      function renderStudentAiHistory() {
+        const history = document.getElementById('student-ai-history');
+        if (!history) return;
+        history.innerHTML = studentAiHistory.map(item => `
+          <div class="ai-history-item"><strong>Q:</strong> ${item.question}<br><strong>A:</strong> ${item.answer}</div>
+        `).join('');
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('student-ai-input');
+        if (input) {
+          input.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              askStudentAi();
+            }
+          });
+        }
+      });
     </script>
   </body>
 </html>

@@ -56,8 +56,9 @@
         <h3>AI Quản trị</h3>
         <p>Chỉ hỗ trợ các câu hỏi về học viên, giảng viên, lớp học và thống kê.</p>
         <textarea id="admin-ai-input" placeholder="Ví dụ: Liệt kê học viên mới tháng này"></textarea>
-        <button class="btn btn-primary" type="button" onclick="askAdminAi()">Hỏi AI</button>
+        <button class="btn btn-primary" type="button" id="admin-ai-btn" onclick="askAdminAi()">Hỏi AI</button>
         <div class="answer" id="admin-ai-answer"></div>
+        <div id="admin-ai-history"></div>
       </div>
     </div>
 
@@ -78,7 +79,7 @@
         window.location.href = `dashboard.html#${section}`;
       }
 
-      const adminAssistant = createRoleAssistant('admin');
+      const adminAiHistory = [];
 
       function toggleAdminAi() {
         const panel = document.getElementById('admin-ai-panel');
@@ -87,12 +88,55 @@
         }
       }
 
-      function askAdminAi() {
+      async function askAdminAi() {
         const input = document.getElementById('admin-ai-input');
         const answer = document.getElementById('admin-ai-answer');
-        if (!input || !answer) return;
-        answer.textContent = adminAssistant.answer(input.value);
+        const button = document.getElementById('admin-ai-btn');
+        if (!input || !answer || !button) return;
+
+        const question = input.value.trim();
+        if (!question) {
+          answer.textContent = 'Vui lòng nhập câu hỏi.';
+          return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Đang xử lý...';
+        answer.textContent = '';
+
+        try {
+          const result = await askAi(question);
+          answer.textContent = result.answer || 'Không có câu trả lời.';
+          adminAiHistory.unshift({ question, answer: result.answer || 'Không có câu trả lời.' });
+          renderAdminAiHistory();
+        } catch (error) {
+          console.error(error);
+          answer.textContent = error.message || 'Lỗi khi gọi dịch vụ AI.';
+        } finally {
+          button.disabled = false;
+          button.textContent = 'Hỏi AI';
+        }
       }
+
+      function renderAdminAiHistory() {
+        const history = document.getElementById('admin-ai-history');
+        if (!history) return;
+        history.innerHTML = adminAiHistory.map(item => `
+          <div class="ai-history-item"><strong>Q:</strong> ${item.question}<br><strong>A:</strong> ${item.answer}</div>
+        `).join('');
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('admin-ai-input');
+        if (input) {
+          input.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              askAdminAi();
+            }
+          });
+        }
+      });
     </script>
   </body>
 </html>

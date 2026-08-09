@@ -92,16 +92,38 @@ function isTeacherOrMaster() {
 
 function renderNav() {
   const nav = document.getElementById('sidebar-nav');
-  const items = [
-    { key: 'overview', label: 'Tổng quan' },
-    { key: 'students', label: 'Học viên' },
-    { key: 'teachers', label: 'Giảng viên' },
-    { key: 'courses', label: 'Lớp học' },
-    { key: 'schedule', label: 'Lịch học' },
-    { key: 'homework', label: 'Bài tập' },
-    { key: 'ai', label: 'Trợ lý AI' },
-    { key: 'payments', label: 'Thanh toán' }
-  ];
+  const user = getAuthUser();
+  const items = [{ key: 'overview', label: 'Tổng quan' }];
+
+  if (user?.role === 'master' || user?.role === 'admin') {
+    items.push(
+      { key: 'students', label: 'Học viên' },
+      { key: 'teachers', label: 'Giảng viên' },
+      { key: 'courses', label: 'Lớp học' },
+      { key: 'schedule', label: 'Lịch học' },
+      { key: 'homework', label: 'Bài tập' },
+      { key: 'payments', label: 'Thanh toán' },
+      { key: 'ai', label: 'Trợ lý AI' }
+    );
+  } else if (user?.role === 'teacher') {
+    items.push(
+      { key: 'students', label: 'Học viên' },
+      { key: 'courses', label: 'Lớp học' },
+      { key: 'schedule', label: 'Lịch học' },
+      { key: 'attendance', label: 'Điểm danh' },
+      { key: 'homework', label: 'Bài tập' },
+      { key: 'payments', label: 'Thanh toán' },
+      { key: 'ai', label: 'Trợ lý AI' }
+    );
+  } else if (user?.role === 'student') {
+    items.push(
+      { key: 'schedule', label: 'Lịch học' },
+      { key: 'attendance', label: 'Điểm danh' },
+      { key: 'ai', label: 'Trợ lý AI' }
+    );
+  } else {
+    items.push({ key: 'ai', label: 'Trợ lý AI' });
+  }
 
   nav.innerHTML = items.map(item => `
     <button class="nav-btn ${state.activeView === item.key ? 'active' : ''}" data-view="${item.key}">
@@ -139,8 +161,12 @@ function renderOverview() {
 
 function renderStudents() {
   const tbody = document.getElementById('student-table-body');
+  const user = getAuthUser();
   const canManage = isTeacherOrMaster();
-  tbody.innerHTML = state.students.map(student => `
+  const canAddStudent = canManage;
+  const canViewStudent = user?.role !== 'student' ? state.students : state.students.filter(student => student.email === user.email || student.name === user.name);
+
+  tbody.innerHTML = canViewStudent.map(student => `
     <tr>
       <td>${student.name}</td>
       <td>${student.email}</td>
@@ -156,13 +182,12 @@ function renderStudents() {
 
   const addStudentBtn = document.getElementById('add-student-btn');
   if (addStudentBtn) {
-    addStudentBtn.style.display = canManage ? 'inline-flex' : 'none';
+    addStudentBtn.style.display = canAddStudent ? 'inline-flex' : 'none';
   }
 }
-
 function renderTeachers() {
   const tbody = document.getElementById('teacher-table-body');
-  const canManage = isMaster();
+  const canManage = getAuthUser()?.role === 'master' || getAuthUser()?.role === 'admin';
   tbody.innerHTML = state.teachers.map(teacher => `
     <tr>
       <td>${teacher.name}</td>
@@ -175,11 +200,17 @@ function renderTeachers() {
       </td>
     </tr>
   `).join('');
+
+  const addTeacherBtn = document.getElementById('add-teacher-btn');
+  if (addTeacherBtn) {
+    addTeacherBtn.style.display = 'none';
+  }
 }
 
 function renderCourses() {
   const tbody = document.getElementById('course-table-body');
   const teacherMap = Object.fromEntries(state.teachers.map(teacher => [teacher.id, teacher.name]));
+  const canManage = isTeacherOrMaster();
   tbody.innerHTML = state.courses.map(course => `
     <tr>
       <td>${course.name}</td>
@@ -188,14 +219,21 @@ function renderCourses() {
       <td>${course.room}</td>
       <td>${course.day} • ${course.time}</td>
       <td>
-        <button class="btn secondary" data-action="edit-course" data-id="${course.id}">Sửa</button>
-        <button class="btn danger" data-action="delete-course" data-id="${course.id}">Xóa</button>
+        ${canManage ? `<button class="btn secondary" data-action="edit-course" data-id="${course.id}">Sửa</button>` : ''}
+        ${canManage ? `<button class="btn danger" data-action="delete-course" data-id="${course.id}">Xóa</button>` : ''}
       </td>
     </tr>
   `).join('');
 
+  const addCourseBtn = document.querySelector('[data-form-toggle="course-form"]');
+  if (addCourseBtn) {
+    addCourseBtn.style.display = canManage ? 'inline-flex' : 'none';
+  }
+
   const teacherSelect = document.getElementById('course-teacher');
-  teacherSelect.innerHTML = ['<option value="">Chọn giảng viên</option>', ...state.teachers.map(teacher => `<option value="${teacher.id}">${teacher.name}</option>`)].join('');
+  if (teacherSelect) {
+    teacherSelect.innerHTML = ['<option value="">Chọn giảng viên</option>', ...state.teachers.map(teacher => `<option value="${teacher.id}">${teacher.name}</option>`)].join('');
+  }
 }
 
 function renderSchedule() {
@@ -228,7 +266,7 @@ function renderSchedule() {
 
   const scheduleFormCard = document.getElementById('schedule-form-card');
   if (scheduleFormCard) {
-    scheduleFormCard.style.display = canManage ? 'block' : 'none';
+    scheduleFormCard.classList.remove('open');
   }
 }
 
@@ -365,6 +403,27 @@ function renderAiInsights() {
   `).join('');
 }
 
+async function askDashboardAi(question) {
+  const message = (question || '').trim();
+  if (!message) {
+    throw new Error('Vui lòng nhập câu hỏi');
+  }
+  const token = getAuthToken();
+  const response = await fetch('/api/ai/ask', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ question: message })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Lỗi AI');
+  }
+  return data.answer || 'Không có câu trả lời.';
+}
+
 function getAiReply(input) {
   const text = input.toLowerCase();
   const revenue = state.payments
@@ -419,6 +478,22 @@ function updateAuthUI() {
 }
 
 function setActiveView(view) {
+  const user = getAuthUser();
+  const allowedViews = ['overview'];
+  if (user?.role === 'master' || user?.role === 'admin') {
+    allowedViews.push('students', 'teachers', 'courses', 'schedule', 'homework', 'payments', 'ai');
+  } else if (user?.role === 'teacher') {
+    allowedViews.push('students', 'courses', 'schedule', 'attendance', 'homework', 'payments', 'ai');
+  } else if (user?.role === 'student') {
+    allowedViews.push('schedule', 'attendance', 'ai');
+  } else {
+    allowedViews.push('ai');
+  }
+
+  if (!allowedViews.includes(view)) {
+    view = 'overview';
+  }
+
   state.activeView = view;
   document.querySelectorAll('.view').forEach(section => section.classList.toggle('active', section.id === view));
   document.querySelectorAll('.nav-btn').forEach(button => button.classList.toggle('active', button.dataset.view === view));
@@ -536,8 +611,30 @@ function attachEvents() {
 
   document.querySelectorAll('[data-form-toggle]').forEach(button => {
     button.addEventListener('click', () => {
+      const user = getAuthUser();
       const formId = button.dataset.formToggle;
+      const canManage = user?.role === 'master' || user?.role === 'admin';
+      const canAddStudent = canManage || user?.role === 'teacher';
+
+      if (formId === 'student-form') {
+        if (!canAddStudent) {
+          alert('Bạn không có quyền thực hiện thao tác này.');
+          return;
+        }
+      }
+
+      if (formId === 'teacher-form' || formId === 'course-form') {
+        if (!canManage) {
+          alert('Bạn không có quyền thực hiện thao tác này.');
+          return;
+        }
+      }
+
       const form = document.getElementById(formId);
+      const card = form?.closest('.form-card');
+      if (card) {
+        card.classList.add('open');
+      }
       form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       form?.querySelector('input, select')?.focus();
     });
@@ -545,7 +642,21 @@ function attachEvents() {
 
   document.getElementById('student-form').addEventListener('submit', (event) => {
     event.preventDefault();
+    const user = getAuthUser();
+    const isTeacherUser = user?.role === 'teacher';
+    const canManage = user?.role === 'master' || user?.role === 'admin';
+
     const id = document.getElementById('student-id').value;
+    if (id && !canManage) {
+      alert('Bạn không có quyền chỉnh sửa học viên.');
+      return;
+    }
+
+    if (!id && !canManage && !isTeacherUser) {
+      alert('Bạn không có quyền thêm học viên.');
+      return;
+    }
+
     const student = {
       id: id || crypto.randomUUID(),
       name: document.getElementById('student-name').value,
@@ -568,6 +679,11 @@ function attachEvents() {
 
   document.getElementById('teacher-form').addEventListener('submit', (event) => {
     event.preventDefault();
+    if (!isMaster() && getAuthUser()?.role !== 'admin') {
+      alert('Bạn không có quyền thực hiện thao tác này.');
+      return;
+    }
+
     const id = document.getElementById('teacher-id').value;
     const teacher = {
       id: id || crypto.randomUUID(),
@@ -589,6 +705,11 @@ function attachEvents() {
 
   document.getElementById('course-form').addEventListener('submit', (event) => {
     event.preventDefault();
+    if (!isMaster() && getAuthUser()?.role !== 'admin') {
+      alert('Bạn không có quyền thực hiện thao tác này.');
+      return;
+    }
+
     const id = document.getElementById('course-id').value;
     const course = {
       id: id || crypto.randomUUID(),
@@ -727,13 +848,20 @@ function attachEvents() {
     document.getElementById('payment-form').reset();
   });
 
-  document.getElementById('ai-form').addEventListener('submit', (event) => {
+  document.getElementById('ai-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const input = document.getElementById('ai-input').value.trim();
     if (!input) return;
 
+    const answerBox = document.getElementById('ai-chat');
     state.aiMessages.push({ role: 'user', text: input });
-    state.aiMessages.push({ role: 'ai', text: getAiReply(input) });
+    renderAiChat();
+    try {
+      const answer = await askDashboardAi(input);
+      state.aiMessages.push({ role: 'ai', text: answer });
+    } catch (error) {
+      state.aiMessages.push({ role: 'ai', text: error.message || 'Lỗi khi gọi AI' });
+    }
     saveState();
     renderAiChat();
     document.getElementById('ai-form').reset();
@@ -744,121 +872,122 @@ function attachEvents() {
     if (!button) return;
 
     const { action, id } = button.dataset;
-    if (action === 'delete-student') {
-      state.students = state.students.filter(student => student.id !== id);
-      saveState();
-      renderAll();
-    }
+    const user = getAuthUser();
+    const canManageUser = isTeacherOrMaster();
+    const canManageTeacherOrMaster = isTeacherOrMaster();
 
-    if (action === 'edit-student') {
-      const student = state.students.find(item => item.id === id);
-      if (!student) return;
-      document.getElementById('student-id').value = student.id;
-      document.getElementById('student-name').value = student.name;
-      document.getElementById('student-email').value = student.email;
-      document.getElementById('student-phone').value = student.phone;
-      document.getElementById('student-course').value = student.course;
-      document.getElementById('student-level').value = student.level;
-      document.getElementById('student-status').value = student.status;
-      setActiveView('students');
-      document.getElementById('student-name').focus();
-    }
+    const restrictedUserActions = ['delete-student', 'edit-student', 'delete-course', 'edit-course'];
+    const restrictedTeacherActions = ['delete-schedule', 'edit-schedule', 'delete-assignment', 'edit-assignment', 'grade-submission'];
 
-    if (action === 'delete-teacher') {
-      state.teachers = state.teachers.filter(teacher => teacher.id !== id);
-      saveState();
-      renderAll();
-    }
+    if (restrictedUserActions.includes(action) && !canManageUser) return;
+    if (restrictedTeacherActions.includes(action) && !canManageTeacherOrMaster) return;
 
-    if (action === 'edit-teacher') {
-      const teacher = state.teachers.find(item => item.id === id);
-      if (!teacher) return;
-      document.getElementById('teacher-id').value = teacher.id;
-      document.getElementById('teacher-name').value = teacher.name;
-      document.getElementById('teacher-subject').value = teacher.subject;
-      document.getElementById('teacher-phone').value = teacher.phone;
-      document.getElementById('teacher-experience').value = teacher.experience;
-      setActiveView('teachers');
-      document.getElementById('teacher-name').focus();
-    }
-
-    if (action === 'delete-course') {
-      state.courses = state.courses.filter(course => course.id !== id);
-      saveState();
-      renderAll();
-    }
-
-    if (action === 'edit-course') {
-      const course = state.courses.find(item => item.id === id);
-      if (!course) return;
-      document.getElementById('course-id').value = course.id;
-      document.getElementById('course-name').value = course.name;
-      document.getElementById('course-teacher').value = course.teacherId;
-      document.getElementById('course-level').value = course.level;
-      document.getElementById('course-room').value = course.room;
-      document.getElementById('course-day').value = course.day;
-      document.getElementById('course-time').value = course.time;
-      setActiveView('courses');
-      document.getElementById('course-name').focus();
-    }
-
-    if (action === 'delete-schedule') {
-      if (!isTeacherOrMaster()) return;
-      state.schedules = state.schedules.filter(schedule => schedule.id !== id);
-      saveState();
-      renderAll();
-      return;
-    }
-
-    if (action === 'edit-schedule') {
-      if (!isTeacherOrMaster()) return;
-      const schedule = state.schedules.find(item => item.id === id);
-      if (!schedule) return;
-      document.getElementById('schedule-id').value = schedule.id;
-      document.getElementById('schedule-name').value = schedule.name;
-      document.getElementById('schedule-teacher').value = schedule.teacherId;
-      document.getElementById('schedule-room').value = schedule.room;
-      document.getElementById('schedule-day').value = schedule.day;
-      document.getElementById('schedule-time').value = schedule.time;
-      setActiveView('schedule');
-      document.getElementById('schedule-name').focus();
-    }
-
-    if (action === 'delete-assignment') {
-      if (!isTeacherOrMaster()) return;
-      state.assignments = state.assignments.filter(assign => assign.id !== id);
-      saveState();
-      renderAll();
-      return;
-    }
-
-    if (action === 'edit-assignment') {
-      if (!isTeacherOrMaster()) return;
-      const assignment = state.assignments.find(item => item.id === id);
-      if (!assignment) return;
-      document.getElementById('assignment-id').value = assignment.id;
-      document.getElementById('assignment-title').value = assignment.title;
-      document.getElementById('assignment-course').value = assignment.courseId;
-      document.getElementById('assignment-due').value = assignment.dueDate;
-      document.getElementById('assignment-desc').value = assignment.description;
-      setActiveView('homework');
-      document.getElementById('assignment-title').focus();
-      return;
-    }
-
-    if (action === 'grade-submission') {
-      if (!isTeacherOrMaster()) return;
-      const submission = state.submissions.find(item => item.id === id);
-      if (!submission) return;
-      const grade = prompt('Nhập điểm cho bài nộp này:', submission.grade || '');
-      if (grade === null) return;
-      const feedback = prompt('Nhập phản hồi cho học viên:', submission.feedback || '');
-      if (feedback === null) return;
-      submission.grade = grade;
-      submission.feedback = feedback;
-      saveState();
-      renderAll();
-      return;
+    switch (action) {
+      case 'delete-student':
+        state.students = state.students.filter(student => student.id !== id);
+        saveState();
+        renderAll();
+        break;
+      case 'edit-student': {
+        const student = state.students.find(item => item.id === id);
+        if (!student) return;
+        document.getElementById('student-id').value = student.id;
+        document.getElementById('student-name').value = student.name;
+        document.getElementById('student-email').value = student.email;
+        document.getElementById('student-phone').value = student.phone;
+        document.getElementById('student-course').value = student.course;
+        document.getElementById('student-level').value = student.level;
+        document.getElementById('student-status').value = student.status;
+        setActiveView('students');
+        document.getElementById('student-name').focus();
+        break;
+      }
+      case 'delete-teacher':
+        state.teachers = state.teachers.filter(teacher => teacher.id !== id);
+        saveState();
+        renderAll();
+        break;
+      case 'edit-teacher': {
+        const teacher = state.teachers.find(item => item.id === id);
+        if (!teacher) return;
+        document.getElementById('teacher-id').value = teacher.id;
+        document.getElementById('teacher-name').value = teacher.name;
+        document.getElementById('teacher-subject').value = teacher.subject;
+        document.getElementById('teacher-phone').value = teacher.phone;
+        document.getElementById('teacher-experience').value = teacher.experience;
+        setActiveView('teachers');
+        document.getElementById('teacher-name').focus();
+        break;
+      }
+      case 'delete-course':
+        state.courses = state.courses.filter(course => course.id !== id);
+        saveState();
+        renderAll();
+        break;
+      case 'edit-course': {
+        const course = state.courses.find(item => item.id === id);
+        if (!course) return;
+        document.getElementById('course-id').value = course.id;
+        document.getElementById('course-name').value = course.name;
+        document.getElementById('course-teacher').value = course.teacherId;
+        document.getElementById('course-level').value = course.level;
+        document.getElementById('course-room').value = course.room;
+        document.getElementById('course-day').value = course.day;
+        document.getElementById('course-time').value = course.time;
+        setActiveView('courses');
+        document.getElementById('course-name').focus();
+        break;
+      }
+      case 'delete-schedule':
+        state.schedules = state.schedules.filter(schedule => schedule.id !== id);
+        saveState();
+        renderAll();
+        break;
+      case 'edit-schedule': {
+        const schedule = state.schedules.find(item => item.id === id);
+        if (!schedule) return;
+        document.getElementById('schedule-id').value = schedule.id;
+        document.getElementById('schedule-name').value = schedule.name;
+        document.getElementById('schedule-teacher').value = schedule.teacherId;
+        document.getElementById('schedule-room').value = schedule.room;
+        document.getElementById('schedule-day').value = schedule.day;
+        document.getElementById('schedule-time').value = schedule.time;
+        setActiveView('schedule');
+        document.getElementById('schedule-name').focus();
+        break;
+      }
+      case 'delete-assignment':
+        state.assignments = state.assignments.filter(assign => assign.id !== id);
+        saveState();
+        renderAll();
+        break;
+      case 'edit-assignment': {
+        const assignment = state.assignments.find(item => item.id === id);
+        if (!assignment) return;
+        document.getElementById('assignment-id').value = assignment.id;
+        document.getElementById('assignment-title').value = assignment.title;
+        document.getElementById('assignment-course').value = assignment.courseId;
+        document.getElementById('assignment-due').value = assignment.dueDate;
+        document.getElementById('assignment-desc').value = assignment.description;
+        setActiveView('homework');
+        document.getElementById('assignment-title').focus();
+        break;
+      }
+      case 'grade-submission': {
+        const submission = state.submissions.find(item => item.id === id);
+        if (!submission) return;
+        const grade = prompt('Nhập điểm cho bài nộp này:', submission.grade || '');
+        if (grade === null) return;
+        const feedback = prompt('Nhập phản hồi cho học viên:', submission.feedback || '');
+        if (feedback === null) return;
+        submission.grade = grade;
+        submission.feedback = feedback;
+        saveState();
+        renderAll();
+        break;
+      }
+      default:
+        break;
     }
   });
 }

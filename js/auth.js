@@ -34,12 +34,16 @@ function seedUsers() {
   return merged;
 }
 
-function setSession(user) {
-  localStorage.setItem('linguahub-session', JSON.stringify(user));
+function setSession(session) {
+  localStorage.setItem('linguahub-session', JSON.stringify(session));
 }
 
 function getSession() {
   return JSON.parse(localStorage.getItem('linguahub-session') || 'null');
+}
+
+function getAuthToken() {
+  return getSession()?.token || null;
 }
 
 function clearSession() {
