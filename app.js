@@ -15,7 +15,7 @@ const defaultState = {
     { id: crypto.randomUUID(), name: 'Business English', teacherId: null, level: 'Advanced', room: 'B202', day: 'Thứ 3, 5', time: '20:00 - 21:30' }
   ],
   schedules: [
-    { id: crypto.randomUUID(), name: 'IELTS Intensive', teacherId: null, room: 'A101', day: 'Thứ 2, 4, 6', time: '19:00 - 20:30' }
+    { id: crypto.randomUUID(), courseId: null, teacherId: null, room: 'A101', day: 'Thứ 2, 4, 6', time: '19:00 - 20:30' }
   ],
   assignments: [
     { id: crypto.randomUUID(), title: 'Bài tập 1 - Listening', courseId: null, dueDate: '2026-08-20', createdBy: 'Ms. Lan', description: 'Luyện nghe phần 1 và 2, nộp file ghi âm.' }
@@ -203,7 +203,7 @@ function renderTeachers() {
 
   const addTeacherBtn = document.getElementById('add-teacher-btn');
   if (addTeacherBtn) {
-    addTeacherBtn.style.display = 'none';
+    addTeacherBtn.style.display = canManage ? 'inline-flex' : 'none';
   }
 }
 
@@ -239,10 +239,11 @@ function renderCourses() {
 function renderSchedule() {
   const tbody = document.getElementById('schedule-table-body');
   const teacherMap = Object.fromEntries(state.teachers.map(teacher => [teacher.id, teacher.name]));
+  const courseMap = Object.fromEntries(state.courses.map(course => [course.id, course.name]));
   const canManage = isTeacherOrMaster();
   tbody.innerHTML = state.schedules.map(schedule => `
     <tr>
-      <td>${schedule.name}</td>
+      <td>${courseMap[schedule.courseId] || schedule.name || 'Chưa chọn'}</td>
       <td>${teacherMap[schedule.teacherId] || 'Chưa phân công'}</td>
       <td>${schedule.room}</td>
       <td>${schedule.day}</td>
@@ -257,6 +258,11 @@ function renderSchedule() {
   const teacherSelect = document.getElementById('schedule-teacher');
   if (teacherSelect) {
     teacherSelect.innerHTML = ['<option value="">Chọn giảng viên</option>', ...state.teachers.map(teacher => `<option value="${teacher.id}">${teacher.name}</option>`)].join('');
+  }
+
+  const courseSelect = document.getElementById('schedule-course');
+  if (courseSelect) {
+    courseSelect.innerHTML = ['<option value="">Chọn lớp học</option>', ...state.courses.map(course => `<option value="${course.id}">${course.name}</option>`)].join('');
   }
 
   const scheduleActionBtn = document.getElementById('schedule-action');
@@ -588,6 +594,7 @@ function clearCourseForm() {
 
 function clearScheduleForm() {
   document.getElementById('schedule-id').value = '';
+  document.getElementById('schedule-course').value = '';
   document.getElementById('schedule-form').reset();
 }
 
@@ -614,6 +621,7 @@ function attachEvents() {
       const user = getAuthUser();
       const formId = button.dataset.formToggle;
       const canManage = user?.role === 'master' || user?.role === 'admin';
+      const canManageCourse = canManage || user?.role === 'teacher';
       const canAddStudent = canManage || user?.role === 'teacher';
 
       if (formId === 'student-form') {
@@ -623,8 +631,15 @@ function attachEvents() {
         }
       }
 
-      if (formId === 'teacher-form' || formId === 'course-form') {
+      if (formId === 'teacher-form') {
         if (!canManage) {
+          alert('Bạn không có quyền thực hiện thao tác này.');
+          return;
+        }
+      }
+
+      if (formId === 'course-form') {
+        if (!canManageCourse) {
           alert('Bạn không có quyền thực hiện thao tác này.');
           return;
         }
@@ -705,8 +720,8 @@ function attachEvents() {
 
   document.getElementById('course-form').addEventListener('submit', (event) => {
     event.preventDefault();
-    if (!isMaster() && getAuthUser()?.role !== 'admin') {
-      alert('Bạn không có quyền thực hiện thao tác này.');
+    if (!isTeacherOrMaster()) {
+      alert('Chỉ admin và giảng viên mới được quản lý lớp học');
       return;
     }
 
@@ -795,7 +810,7 @@ function attachEvents() {
       const id = document.getElementById('schedule-id').value;
       const schedule = {
         id: id || crypto.randomUUID(),
-        name: document.getElementById('schedule-name').value,
+        courseId: document.getElementById('schedule-course').value,
         teacherId: document.getElementById('schedule-teacher').value,
         room: document.getElementById('schedule-room').value,
         day: document.getElementById('schedule-day').value,
@@ -853,7 +868,6 @@ function attachEvents() {
     const input = document.getElementById('ai-input').value.trim();
     if (!input) return;
 
-    const answerBox = document.getElementById('ai-chat');
     state.aiMessages.push({ role: 'user', text: input });
     renderAiChat();
     try {
@@ -866,6 +880,15 @@ function attachEvents() {
     renderAiChat();
     document.getElementById('ai-form').reset();
   });
+
+  const clearAiHistoryBtn = document.getElementById('clear-ai-history');
+  if (clearAiHistoryBtn) {
+    clearAiHistoryBtn.addEventListener('click', () => {
+      state.aiMessages = [];
+      saveState();
+      renderAiChat();
+    });
+  }
 
   document.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-action]');
@@ -947,13 +970,13 @@ function attachEvents() {
         const schedule = state.schedules.find(item => item.id === id);
         if (!schedule) return;
         document.getElementById('schedule-id').value = schedule.id;
-        document.getElementById('schedule-name').value = schedule.name;
+        document.getElementById('schedule-course').value = schedule.courseId || '';
         document.getElementById('schedule-teacher').value = schedule.teacherId;
         document.getElementById('schedule-room').value = schedule.room;
         document.getElementById('schedule-day').value = schedule.day;
         document.getElementById('schedule-time').value = schedule.time;
         setActiveView('schedule');
-        document.getElementById('schedule-name').focus();
+        document.getElementById('schedule-course').focus();
         break;
       }
       case 'delete-assignment':

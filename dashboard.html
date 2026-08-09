@@ -311,7 +311,7 @@
               <input type="hidden" id="schedule-id" />
               <label>
                 Tên lớp
-                <input id="schedule-name" required />
+                <select id="schedule-course" required></select>
               </label>
               <label>
                 Giảng viên
@@ -549,7 +549,8 @@
                 Câu hỏi
                 <input id="ai-input" placeholder="Hỏi AI về học viên, lớp học hoặc thống kê" />
               </label>
-              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end;">
+              <div class="form-actions" style="grid-column: span 2; justify-content: flex-end; gap: 10px;">
+                <button class="btn secondary" id="clear-ai-history" type="button">Xóa lịch sử</button>
                 <button class="btn primary" type="submit">Gửi</button>
               </div>
             </form>
