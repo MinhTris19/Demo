@@ -1,6 +1,9 @@
 const STORAGE_KEY = 'linguahub-state-v1';
 const AUTH_KEY = 'linguahub-auth-v1';
 
+const defaultCourseId1 = 'course-ielts-id';
+const defaultCourseId2 = 'course-biz-id';
+
 const defaultState = {
   students: [
     { id: crypto.randomUUID(), name: 'An Nguyen', email: 'an@example.com', phone: '0901112222', course: 'IELTS', level: 'Intermediate', status: 'Đang học' },
@@ -11,12 +14,13 @@ const defaultState = {
     { id: crypto.randomUUID(), name: 'Mr. David', subject: 'English Conversation', phone: '0987654321', experience: '8 năm' }
   ],
   courses: [
-    { id: crypto.randomUUID(), name: 'IELTS Intensive', teacherId: null, level: 'Intermediate', room: 'A101', day: 'Thứ 2, 4, 6', time: '19:00 - 20:30' },
-    { id: crypto.randomUUID(), name: 'Business English', teacherId: null, level: 'Advanced', room: 'B202', day: 'Thứ 3, 5', time: '20:00 - 21:30' }
+    { id: defaultCourseId1, name: 'IELTS Intensive', teacherId: null, level: 'Intermediate', room: 'A101', day: 'Thứ 2, 4, 6', time: '19:00 - 20:30' },
+    { id: defaultCourseId2, name: 'Business English', teacherId: null, level: 'Advanced', room: 'B202', day: 'Thứ 3, 5', time: '20:00 - 21:30' }
   ],
   schedules: [
-    { id: crypto.randomUUID(), courseId: null, teacherId: null, room: 'A101', day: 'Thứ 2, 4, 6', time: '19:00 - 20:30' }
+    { id: crypto.randomUUID(), courseId: defaultCourseId1, teacherId: null, room: 'A101', day: 'Thứ 2, 4, 6', time: '19:00 - 20:30' }
   ],
+  enrollments: [],
   assignments: [
     { id: crypto.randomUUID(), title: 'Bài tập 1 - Listening', courseId: null, dueDate: '2026-08-20', createdBy: 'Ms. Lan', description: 'Luyện nghe phần 1 và 2, nộp file ghi âm.' }
   ],
@@ -47,7 +51,9 @@ function loadState() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return structuredClone(defaultState);
   try {
-    return { ...structuredClone(defaultState), ...JSON.parse(stored) };
+    const data = JSON.parse(stored);
+    data.enrollments = data.enrollments || [];
+    return { ...structuredClone(defaultState), ...data };
   } catch {
     return structuredClone(defaultState);
   }
@@ -117,8 +123,8 @@ function renderNav() {
     );
   } else if (user?.role === 'student') {
     items.push(
+      { key: 'courses', label: 'Lớp học' },
       { key: 'schedule', label: 'Lịch học' },
-      { key: 'attendance', label: 'Điểm danh' },
       { key: 'ai', label: 'Trợ lý AI' }
     );
   } else {
@@ -134,8 +140,45 @@ function renderNav() {
   document.getElementById('page-title').textContent = items.find(item => item.key === state.activeView)?.label || 'Tổng quan';
 }
 
+function getAllStudents() {
+  state.students = state.students || [];
+  state.users = state.users || [];
+  const list = [...state.students];
+  const existingEmails = new Set(list.map(s => (s.email || '').toLowerCase()));
+
+  state.users.forEach(user => {
+    if (user.role === 'student' && user.email && !existingEmails.has(user.email.toLowerCase())) {
+      list.push({
+        id: user.id || crypto.randomUUID(),
+        name: user.name || user.fullName || user.username || 'Học viên mới',
+        email: user.email,
+        phone: user.phone || '-',
+        course: user.course || 'Chưa phân lớp',
+        level: user.level || 'Cơ bản',
+        status: 'Đang học'
+      });
+      existingEmails.add(user.email.toLowerCase());
+    }
+  });
+
+  const sessionUser = getSessionUser();
+  if (sessionUser && sessionUser.role === 'student' && sessionUser.email && !existingEmails.has(sessionUser.email.toLowerCase())) {
+    list.push({
+      id: sessionUser.id || crypto.randomUUID(),
+      name: sessionUser.name || sessionUser.fullName || sessionUser.username || 'Học viên mới',
+      email: sessionUser.email,
+      phone: sessionUser.phone || '-',
+      course: 'Chưa phân lớp',
+      level: 'Cơ bản',
+      status: 'Đang học'
+    });
+  }
+
+  return list;
+}
+
 function renderOverview() {
-  document.getElementById('student-count').textContent = state.students.length;
+  document.getElementById('student-count').textContent = getAllStudents().length;
   document.getElementById('teacher-count').textContent = state.teachers.length;
   document.getElementById('course-count').textContent = state.courses.length;
 
@@ -145,7 +188,7 @@ function renderOverview() {
   document.getElementById('revenue-total').textContent = revenue.toLocaleString('vi-VN') + 'đ';
 
   const summaryItems = [
-    { label: 'Số học viên đang học', value: state.students.filter(student => student.status === 'Đang học').length },
+    { label: 'Số học viên đang học', value: getAllStudents().filter(student => student.status === 'Đang học').length },
     { label: 'Lớp học đang hoạt động', value: state.courses.length },
     { label: 'Thanh toán đã thu', value: state.payments.filter(item => item.status === 'Đã thu').length },
     { label: 'Giảng viên sẵn sàng', value: state.teachers.length }
@@ -164,7 +207,8 @@ function renderStudents() {
   const user = getAuthUser();
   const canManage = isTeacherOrMaster();
   const canAddStudent = canManage;
-  const canViewStudent = user?.role !== 'student' ? state.students : state.students.filter(student => student.email === user.email || student.name === user.name);
+  const allStudents = getAllStudents();
+  const canViewStudent = user?.role !== 'student' ? allStudents : allStudents.filter(student => student.email === user.email || student.name === user.name);
 
   tbody.innerHTML = canViewStudent.map(student => `
     <tr>
@@ -211,19 +255,35 @@ function renderCourses() {
   const tbody = document.getElementById('course-table-body');
   const teacherMap = Object.fromEntries(state.teachers.map(teacher => [teacher.id, teacher.name]));
   const canManage = isTeacherOrMaster();
-  tbody.innerHTML = state.courses.map(course => `
-    <tr>
-      <td>${course.name}</td>
-      <td>${teacherMap[course.teacherId] || 'Chưa phân công'}</td>
-      <td>${course.level}</td>
-      <td>${course.room}</td>
-      <td>${course.day} • ${course.time}</td>
-      <td>
-        ${canManage ? `<button class="btn secondary" data-action="edit-course" data-id="${course.id}">Sửa</button>` : ''}
-        ${canManage ? `<button class="btn danger" data-action="delete-course" data-id="${course.id}">Xóa</button>` : ''}
-      </td>
-    </tr>
-  `).join('');
+  const user = getAuthUser();
+  const isStudentRole = user?.role === 'student';
+  state.enrollments = state.enrollments || [];
+
+  tbody.innerHTML = state.courses.map(course => {
+    const isEnrolled = user && state.enrollments.some(e => e.studentId === user.id && e.courseId === course.id);
+    let actionButtons = '';
+    if (canManage) {
+      actionButtons += `<button class="btn secondary" data-action="edit-course" data-id="${course.id}">Sửa</button> `;
+      actionButtons += `<button class="btn danger" data-action="delete-course" data-id="${course.id}">Xóa</button>`;
+    } else if (isStudentRole) {
+      if (isEnrolled) {
+        actionButtons = `<button class="btn secondary" data-action="unregister-course" data-id="${course.id}">Đã đăng ký (Hủy)</button>`;
+      } else {
+        actionButtons = `<button class="btn primary" data-action="register-course" data-id="${course.id}">Đăng ký lớp</button>`;
+      }
+    }
+
+    return `
+      <tr>
+        <td>${course.name}</td>
+        <td>${teacherMap[course.teacherId] || 'Chưa phân công'}</td>
+        <td>${course.level}</td>
+        <td>${course.room}</td>
+        <td>${course.day} • ${course.time}</td>
+        <td>${actionButtons}</td>
+      </tr>
+    `;
+  }).join('');
 
   const addCourseBtn = document.querySelector('[data-form-toggle="course-form"]');
   if (addCourseBtn) {
@@ -241,19 +301,42 @@ function renderSchedule() {
   const teacherMap = Object.fromEntries(state.teachers.map(teacher => [teacher.id, teacher.name]));
   const courseMap = Object.fromEntries(state.courses.map(course => [course.id, course.name]));
   const canManage = isTeacherOrMaster();
-  tbody.innerHTML = state.schedules.map(schedule => `
-    <tr>
-      <td>${courseMap[schedule.courseId] || schedule.name || 'Chưa chọn'}</td>
-      <td>${teacherMap[schedule.teacherId] || 'Chưa phân công'}</td>
-      <td>${schedule.room}</td>
-      <td>${schedule.day}</td>
-      <td>${schedule.time}</td>
-      <td>
-        ${canManage ? `<button class="btn secondary" data-action="edit-schedule" data-id="${schedule.id}">Sửa</button>` : ''}
-        ${canManage ? `<button class="btn danger" data-action="delete-schedule" data-id="${schedule.id}">Xóa</button>` : ''}
-      </td>
-    </tr>
-  `).join('');
+  const user = getAuthUser();
+  const isStudentRole = user?.role === 'student';
+  state.enrollments = state.enrollments || [];
+
+  let schedulesToRender = state.schedules;
+  if (isStudentRole && user) {
+    const studentEnrolledCourseIds = state.enrollments
+      .filter(e => e.studentId === user.id)
+      .map(e => e.courseId);
+    schedulesToRender = state.schedules.filter(s => studentEnrolledCourseIds.includes(s.courseId));
+  }
+
+  if (isStudentRole && schedulesToRender.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align:center; padding:24px; color:#64748b;">
+          Bạn chưa đăng ký lớp học nào hoặc lớp bạn đăng ký chưa được xếp lịch.<br/>
+          <button class="btn primary" style="margin-top:12px;" onclick="setActiveView('courses')">Đến trang Lớp học để đăng ký</button>
+        </td>
+      </tr>
+    `;
+  } else {
+    tbody.innerHTML = schedulesToRender.map(schedule => `
+      <tr>
+        <td>${courseMap[schedule.courseId] || schedule.name || 'Chưa chọn'}</td>
+        <td>${teacherMap[schedule.teacherId] || 'Chưa phân công'}</td>
+        <td>${schedule.room}</td>
+        <td>${schedule.day}</td>
+        <td>${schedule.time}</td>
+        <td>
+          ${canManage ? `<button class="btn secondary" data-action="edit-schedule" data-id="${schedule.id}">Sửa</button>` : ''}
+          ${canManage ? `<button class="btn danger" data-action="delete-schedule" data-id="${schedule.id}">Xóa</button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
 
   const teacherSelect = document.getElementById('schedule-teacher');
   if (teacherSelect) {
@@ -276,94 +359,48 @@ function renderSchedule() {
   }
 }
 
-function renderHomework() {
-  const assignmentBody = document.getElementById('assignment-table-body');
-  const submissionBody = document.getElementById('submission-table-body');
-  const assignmentCourse = document.getElementById('assignment-course');
-  const submissionAssignment = document.getElementById('submission-assignment');
-  const submissionStudent = document.getElementById('submission-student');
-
-  const courseMap = Object.fromEntries(state.courses.map(course => [course.id, course.name]));
-  const studentMap = Object.fromEntries(state.students.map(student => [student.id, student.name]));
-
-  const canCreateAssignment = isTeacherOrMaster();
-  const canSubmit = isStudent();
-  const canGrade = isTeacherOrMaster();
-
-  assignmentBody.innerHTML = state.assignments.map(assign => `
-    <tr>
-      <td>${assign.title}</td>
-      <td>${courseMap[assign.courseId] || 'Chưa chọn'}</td>
-      <td>${assign.dueDate}</td>
-      <td>${assign.createdBy}</td>
-      <td>${assign.description}</td>
-      <td>
-        ${canCreateAssignment ? `<button class="btn secondary" data-action="edit-assignment" data-id="${assign.id}">Sửa</button>` : ''}
-        ${canCreateAssignment ? `<button class="btn danger" data-action="delete-assignment" data-id="${assign.id}">Xóa</button>` : ''}
-      </td>
-    </tr>
-  `).join('');
-
-  submissionBody.innerHTML = state.submissions.map(sub => `
-    <tr>
-      <td>${studentMap[sub.studentId] || 'Chưa xác định'}</td>
-      <td>${state.assignments.find(assign => assign.id === sub.assignmentId)?.title || 'Không rõ'}</td>
-      <td>${sub.content}</td>
-      <td>${sub.submittedAt}</td>
-      <td>${sub.grade || '-'}</td>
-      <td>${sub.feedback || '-'}</td>
-      <td>
-        ${canGrade ? `<button class="btn secondary" data-action="grade-submission" data-id="${sub.id}">Chấm</button>` : ''}
-      </td>
-    </tr>
-  `).join('');
-
-  if (assignmentCourse) {
-    assignmentCourse.innerHTML = ['<option value="">Chọn lớp học</option>', ...state.courses.map(course => `<option value="${course.id}">${course.name}</option>`)].join('');
-  }
-
-  if (submissionAssignment) {
-    submissionAssignment.innerHTML = ['<option value="">Chọn bài tập</option>', ...state.assignments.map(assign => `<option value="${assign.id}">${assign.title}</option>`)].join('');
-  }
-
-  if (submissionStudent) {
-    submissionStudent.innerHTML = ['<option value="">Chọn học viên</option>', ...state.students.map(student => `<option value="${student.id}">${student.name}</option>`)].join('');
-  }
-
-  const assignmentActionBtn = document.getElementById('assignment-action');
-  if (assignmentActionBtn) {
-    assignmentActionBtn.style.display = canCreateAssignment ? 'inline-flex' : 'none';
-  }
-
-  const assignmentFormCard = document.getElementById('assignment-form-card');
-  if (assignmentFormCard) {
-    assignmentFormCard.style.display = canCreateAssignment ? 'block' : 'none';
-  }
-
-  const submissionFormCard = document.getElementById('submission-form-card');
-  if (submissionFormCard) {
-    submissionFormCard.style.display = canSubmit ? 'block' : 'none';
-  }
-}
-
 function renderAttendance() {
   const tbody = document.getElementById('attendance-table-body');
-  const studentMap = Object.fromEntries(state.students.map(student => [student.id, student.name]));
-  tbody.innerHTML = state.attendance.map(item => `
+  const allStudents = getAllStudents();
+  const studentMap = Object.fromEntries(allStudents.map(student => [student.id, student.name]));
+  const user = getAuthUser();
+  const canManage = isTeacherOrMaster();
+
+  let records = state.attendance || [];
+  if (user?.role === 'student') {
+    records = records.filter(item => item.studentId === user.id);
+  }
+
+  tbody.innerHTML = records.map(item => `
     <tr>
-      <td>${studentMap[item.studentId] || 'Chưa xác định'}</td>
-      <td>${item.courseName}</td>
-      <td>${item.date}</td>
-      <td>${item.status}</td>
-      <td>${item.markedBy}</td>
+      <td>${studentMap[item.studentId] || item.studentName || 'Chưa xác định'}</td>
+      <td>${item.courseName || '-'}</td>
+      <td>${item.date || '-'}</td>
+      <td>
+        <span class="badge ${item.status === 'Có mặt' ? 'status-present' : item.status === 'Vắng' ? 'status-absent' : 'status-waiting'}">
+          ${item.status}
+        </span>
+      </td>
+      <td>${item.note || '-'}</td>
+      <td>${item.markedBy || '-'}</td>
+      <td>
+        ${canManage ? `
+          <button class="btn secondary" data-action="mark-attendance-btn" data-id="${item.id}">Đổi trạng thái</button>
+          <button class="btn danger" data-action="delete-attendance-btn" data-id="${item.id}">Xóa</button>
+        ` : ''}
+      </td>
     </tr>
   `).join('');
 
   const studentSelect = document.getElementById('attendance-student');
-  studentSelect.innerHTML = ['<option value="">Chọn học viên</option>', ...state.students.map(student => `<option value="${student.id}">${student.name}</option>`)].join('');
+  if (studentSelect) {
+    studentSelect.innerHTML = ['<option value="">Chọn học viên</option>', ...allStudents.map(student => `<option value="${student.id}">${student.name}</option>`)].join('');
+  }
 
   const courseSelect = document.getElementById('attendance-course');
-  courseSelect.innerHTML = ['<option value="">Chọn lớp học</option>', ...state.courses.map(course => `<option value="${course.name}">${course.name}</option>`)].join('');
+  if (courseSelect) {
+    courseSelect.innerHTML = ['<option value="">Chọn lớp học</option>', ...state.courses.map(course => `<option value="${course.name}">${course.name}</option>`)].join('');
+  }
 }
 
 function renderPayments() {
@@ -491,7 +528,7 @@ function setActiveView(view) {
   } else if (user?.role === 'teacher') {
     allowedViews.push('students', 'courses', 'schedule', 'attendance', 'homework', 'payments', 'ai');
   } else if (user?.role === 'student') {
-    allowedViews.push('schedule', 'attendance', 'ai');
+    allowedViews.push('courses', 'schedule', 'attendance', 'ai');
   } else {
     allowedViews.push('ai');
   }
@@ -565,16 +602,7 @@ function renderHomework() {
   if (assignmentActionBtn) {
     assignmentActionBtn.style.display = canCreateAssignment ? 'inline-flex' : 'none';
   }
-
-  const assignmentFormCard = document.getElementById('assignment-form-card');
-  if (assignmentFormCard) {
-    assignmentFormCard.style.display = canCreateAssignment ? 'block' : 'none';
-  }
-
-  const submissionFormCard = document.getElementById('submission-form-card');
-  if (submissionFormCard) {
-    submissionFormCard.style.display = canSubmit ? 'block' : 'none';
-  }
+  // Không can thiệp display của form-card ở đây - dùng CSS class 'open' để toggle
 }
 
 function clearStudentForm() {
@@ -616,6 +644,16 @@ function attachEvents() {
     });
   }
 
+  // Đóng modal chấm điểm khi click vùng nền tối (overlay)
+  const gradeModal = document.getElementById('grade-modal');
+  if (gradeModal) {
+    gradeModal.addEventListener('click', (e) => {
+      if (e.target === gradeModal) {
+        gradeModal.style.display = 'none';
+      }
+    });
+  }
+
   document.querySelectorAll('[data-form-toggle]').forEach(button => {
     button.addEventListener('click', () => {
       const user = getAuthUser();
@@ -623,12 +661,14 @@ function attachEvents() {
       const canManage = user?.role === 'master' || user?.role === 'admin';
       const canManageCourse = canManage || user?.role === 'teacher';
       const canAddStudent = canManage || user?.role === 'teacher';
+      const canCreateAssignment = isTeacherOrMaster();
 
       if (formId === 'student-form') {
         if (!canAddStudent) {
           alert('Bạn không có quyền thực hiện thao tác này.');
           return;
         }
+        clearStudentForm();
       }
 
       if (formId === 'teacher-form') {
@@ -636,6 +676,7 @@ function attachEvents() {
           alert('Bạn không có quyền thực hiện thao tác này.');
           return;
         }
+        clearTeacherForm();
       }
 
       if (formId === 'course-form') {
@@ -643,6 +684,21 @@ function attachEvents() {
           alert('Bạn không có quyền thực hiện thao tác này.');
           return;
         }
+        clearCourseForm();
+      }
+
+      if (formId === 'schedule-form') {
+        clearScheduleForm();
+      }
+
+      if (formId === 'assignment-form') {
+        if (!canCreateAssignment) {
+          alert('Chỉ giảng viên và admin mới được tạo bài tập.');
+          return;
+        }
+        // Reset form khi mở mới
+        document.getElementById('assignment-id').value = '';
+        document.getElementById('assignment-form').reset();
       }
 
       const form = document.getElementById(formId);
@@ -651,23 +707,22 @@ function attachEvents() {
         card.classList.add('open');
       }
       form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      form?.querySelector('input, select')?.focus();
+      form?.querySelector('input, select, textarea')?.focus();
     });
   });
 
   document.getElementById('student-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const user = getAuthUser();
-    const isTeacherUser = user?.role === 'teacher';
-    const canManage = user?.role === 'master' || user?.role === 'admin';
-
+    const canManage = user?.role === 'master' || user?.role === 'admin' || user?.role === 'teacher';
+    
     const id = document.getElementById('student-id').value;
     if (id && !canManage) {
       alert('Bạn không có quyền chỉnh sửa học viên.');
       return;
     }
 
-    if (!id && !canManage && !isTeacherUser) {
+    if (!id && !canManage) {
       alert('Bạn không có quyền thêm học viên.');
       return;
     }
@@ -772,6 +827,9 @@ function attachEvents() {
     renderAll();
     document.getElementById('assignment-form').reset();
     document.getElementById('assignment-id').value = '';
+    // Đóng form sau khi lưu thành công
+    const assignCard = document.getElementById('assignment-form-card');
+    if (assignCard) assignCard.classList.remove('open');
   });
 
   document.getElementById('submission-form').addEventListener('submit', (event) => {
@@ -900,12 +958,47 @@ function attachEvents() {
     const canManageTeacherOrMaster = isTeacherOrMaster();
 
     const restrictedUserActions = ['delete-student', 'edit-student', 'delete-course', 'edit-course'];
-    const restrictedTeacherActions = ['delete-schedule', 'edit-schedule', 'delete-assignment', 'edit-assignment', 'grade-submission'];
+    const restrictedTeacherActions = ['delete-schedule', 'edit-schedule', 'delete-assignment', 'edit-assignment', 'mark-attendance-btn', 'delete-attendance-btn'];
 
     if (restrictedUserActions.includes(action) && !canManageUser) return;
     if (restrictedTeacherActions.includes(action) && !canManageTeacherOrMaster) return;
 
     switch (action) {
+      case 'register-course': {
+        if (!user || user.role !== 'student') return;
+        state.enrollments = state.enrollments || [];
+        if (!state.enrollments.some(e => e.studentId === user.id && e.courseId === id)) {
+          state.enrollments.push({ studentId: user.id, courseId: id });
+          
+          const course = state.courses.find(c => c.id === id);
+          const courseName = course ? course.name : 'Lớp học';
+          state.attendance = state.attendance || [];
+          state.attendance.unshift({
+            id: crypto.randomUUID(),
+            studentId: user.id,
+            studentName: user.name || user.fullName || 'Học viên',
+            courseName: courseName,
+            date: new Date().toISOString().slice(0, 10),
+            status: 'Chờ điểm danh',
+            note: 'Học viên vừa đăng ký lớp',
+            markedBy: 'Hệ thống'
+          });
+
+          saveState();
+          renderAll();
+          alert('Đăng ký lớp học thành công! Đã tự động tạo bản ghi điểm danh.');
+        }
+        break;
+      }
+      case 'unregister-course': {
+        if (!user || user.role !== 'student') return;
+        state.enrollments = state.enrollments || [];
+        state.enrollments = state.enrollments.filter(e => !(e.studentId === user.id && e.courseId === id));
+        saveState();
+        renderAll();
+        alert('Đã hủy đăng ký lớp học.');
+        break;
+      }
       case 'delete-student':
         state.students = state.students.filter(student => student.id !== id);
         saveState();
@@ -993,20 +1086,92 @@ function attachEvents() {
         document.getElementById('assignment-due').value = assignment.dueDate;
         document.getElementById('assignment-desc').value = assignment.description;
         setActiveView('homework');
-        document.getElementById('assignment-title').focus();
+        // Mở form card để hiện form sửa bài tập
+        const assignCard = document.getElementById('assignment-form-card');
+        if (assignCard) assignCard.classList.add('open');
+        setTimeout(() => document.getElementById('assignment-title').focus(), 100);
         break;
       }
       case 'grade-submission': {
+        // Kiểm tra quyền
+        if (!isTeacherOrMaster()) {
+          alert('Chỉ giảng viên và admin mới được chấm điểm!');
+          return;
+        }
         const submission = state.submissions.find(item => item.id === id);
-        if (!submission) return;
-        const grade = prompt('Nhập điểm cho bài nộp này:', submission.grade || '');
-        if (grade === null) return;
-        const feedback = prompt('Nhập phản hồi cho học viên:', submission.feedback || '');
-        if (feedback === null) return;
-        submission.grade = grade;
-        submission.feedback = feedback;
+        if (!submission) {
+          alert('Không tìm thấy bài nộp! ID: ' + id);
+          console.error('grade-submission: không tìm thấy id=' + id, state.submissions);
+          return;
+        }
+        // Mở modal chấm điểm
+        const modal = document.getElementById('grade-modal');
+        const scoreInput = document.getElementById('grade-modal-score');
+        const feedbackInput = document.getElementById('grade-modal-feedback');
+        const infoDiv = document.getElementById('grade-modal-info');
+        const studentMap2 = Object.fromEntries(getAllStudents().map(s => [s.id, s.name]));
+        const assignTitle = state.assignments.find(a => a.id === submission.assignmentId)?.title || 'Không rõ';
+        const studentName = studentMap2[submission.studentId] || submission.studentName || 'Chưa xác định';
+        if (infoDiv) infoDiv.innerHTML = `
+          <strong>Học viên:</strong> ${studentName}<br/>
+          <strong>Bài tập:</strong> ${assignTitle}<br/>
+          <strong>Nội dung:</strong> ${submission.content}<br/>
+          <strong>Ngày nộp:</strong> ${submission.submittedAt}
+        `;
+        if (scoreInput) scoreInput.value = submission.grade || '';
+        if (feedbackInput) feedbackInput.value = submission.feedback || '';
+        if (modal) {
+          modal.style.display = 'flex';
+          scoreInput?.focus();
+        }
+        // Gắn sự kiện lưu (xoá listener cũ trước để tránh duplicate)
+        const saveBtn = document.getElementById('grade-modal-save');
+        const cancelBtn = document.getElementById('grade-modal-cancel');
+        const newSaveBtn = saveBtn.cloneNode(true);
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        document.getElementById('grade-modal-save').addEventListener('click', () => {
+          const score = document.getElementById('grade-modal-score').value.trim();
+          const feedback = document.getElementById('grade-modal-feedback').value.trim();
+          const idx = state.submissions.findIndex(s => s.id === id);
+          if (idx !== -1) {
+            state.submissions[idx].grade = score;
+            state.submissions[idx].feedback = feedback;
+          }
+          saveState();
+          renderAll();
+          document.getElementById('grade-modal').style.display = 'none';
+          alert('✅ Chấm điểm thành công!');
+        });
+        document.getElementById('grade-modal-cancel').addEventListener('click', () => {
+          document.getElementById('grade-modal').style.display = 'none';
+        });
+        break;
+      }
+      case 'mark-attendance-btn': {
+        state.attendance = state.attendance || [];
+        const item = state.attendance.find(a => a.id === id);
+        if (!item) return;
+        
+        const nextStatusMap = {
+          'Chờ điểm danh': 'Có mặt',
+          'Có mặt': 'Vắng',
+          'Vắng': 'Muộn',
+          'Muộn': 'Có mặt'
+        };
+        item.status = nextStatusMap[item.status] || 'Có mặt';
+        item.markedBy = user?.name || 'Giảng viên';
         saveState();
         renderAll();
+        break;
+      }
+      case 'delete-attendance-btn': {
+        if (!confirm('Bạn có chắc chắn muốn xóa bản ghi điểm danh này không?')) return;
+        state.attendance = (state.attendance || []).filter(a => a.id !== id);
+        saveState();
+        renderAll();
+        alert('Đã xóa bản ghi điểm danh.');
         break;
       }
       default:

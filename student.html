@@ -39,17 +39,12 @@
           <p>Xem lịch học và thông tin lớp đang theo học.</p>
           <button class="btn btn-primary" type="button" onclick="window.location.href='dashboard.html#courses'">Xem khóa học</button>
         </div>
-        <div class="card">
-          <h3>Điểm danh</h3>
-          <p>Theo dõi trạng thái điểm danh hàng ngày.</p>
-          <button class="btn btn-primary" type="button" onclick="window.location.href='dashboard.html#attendance'">Xem điểm danh</button>
-        </div>
       </div>
 
       <button class="ai-toggle" type="button" onclick="toggleStudentAi()" aria-label="Mở trợ lý AI">🐝</button>
       <div class="ai-panel" id="student-ai-panel">
         <h3>AI Học viên</h3>
-        <p>Chỉ hỗ trợ câu hỏi về khóa học, lịch học và điểm danh.</p>
+        <p>Chỉ hỗ trợ câu hỏi về khóa học và lịch học.</p>
         <textarea id="student-ai-input" placeholder="Ví dụ: Cho tôi xem lịch học tuần này"></textarea>
         <button class="btn btn-primary" type="button" id="student-ai-btn" onclick="askStudentAi()">Hỏi AI</button>
         <div class="answer" id="student-ai-answer"></div>

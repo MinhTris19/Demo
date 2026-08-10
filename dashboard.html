@@ -352,6 +352,7 @@
                   <th>Trạng thái</th>
                   <th>Ghi chú</th>
                   <th>Người điểm danh</th>
+                  <th>Hành động</th>
                 </tr>
               </thead>
               <tbody id="attendance-table-body"></tbody>
@@ -482,6 +483,26 @@
             </table>
           </div>
         </section>
+
+        <!-- Modal chấm điểm -->
+        <div id="grade-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+          <div style="background:#fff; border-radius:20px; padding:32px; width:480px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <h3 style="margin:0 0 20px; color:#11223b; font-size:1.2rem;">✏️ Chấm điểm bài nộp</h3>
+            <div id="grade-modal-info" style="background:#f8fafc; border-radius:12px; padding:14px 16px; margin-bottom:20px; font-size:0.95rem; color:#475569;"></div>
+            <label style="display:grid; gap:6px; font-weight:600; color:#66758a; margin-bottom:14px;">
+              Điểm số
+              <input id="grade-modal-score" type="text" placeholder="VD: 8.5 hoặc A+" style="border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; font-size:1rem;"/>
+            </label>
+            <label style="display:grid; gap:6px; font-weight:600; color:#66758a; margin-bottom:20px;">
+              Phản hồi cho học viên
+              <textarea id="grade-modal-feedback" rows="3" placeholder="Nhập nhận xét, góp ý..." style="width:100%; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; font-size:0.95rem; resize:vertical;"></textarea>
+            </label>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+              <button id="grade-modal-cancel" class="btn secondary" type="button">Hủy</button>
+              <button id="grade-modal-save" class="btn primary" type="button">💾 Lưu điểm</button>
+            </div>
+          </div>
+        </div>
 
         <section class="view" id="payments">
           <div class="section-head">

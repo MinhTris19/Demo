@@ -188,9 +188,10 @@ async function addSelectedStudents() {
       showMessage('error', failed.join('; '));
     } else {
       showMessage('success', 'Thêm học viên vào lớp thành công');
+      closeAddStudentPanel(); // Hide add student panel after success
     }
     await fetchClassDetail(classId);
-    await fetchCandidateStudents();
+    // await fetchCandidateStudents(); // no need to fetch candidates if we close the panel
   } catch (error) {
     console.error(error);
     showMessage('error', error.message);
@@ -288,9 +289,11 @@ function filterCandidates() {
 
 function closeAddStudentPanel() {
   document.getElementById('add-student-section').classList.add('hidden');
+  document.getElementById('class-detail-section').classList.remove('hidden');
 }
 
 function openAddStudentPanel() {
+  document.getElementById('class-detail-section').classList.add('hidden');
   document.getElementById('add-student-section').classList.remove('hidden');
 }
 
